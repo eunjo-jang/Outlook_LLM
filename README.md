@@ -72,44 +72,117 @@ cd src
 streamlit run web_app.py
 ```
 
-### 3. Data Processing Pipeline
+### 3. Complete Data Processing Pipeline
 
-Data processing follows this sequence:
+This section describes the complete data processing pipeline from PST files to the final RAG system.
 
-1. **MBOX Conversion** (already completed)
-   ```bash
-   # After activating virtual environment
-   cd scripts
-   python mbox_converter.py
-   ```
+#### Prerequisites
 
-2. **Data Cleaning**
-   ```bash
-   # After activating virtual environment
-   cd scripts
-   python data_cleaner.py
-   ```
+Before starting, you need:
+- **readpst** tool installed (for PST file conversion)
+- **Outlook PST file** containing your email data
 
-3. **Text Chunking**
-   ```bash
-   # After activating virtual environment
-   cd scripts
-   python text_chunker.py
-   ```
+#### Step-by-Step Data Processing
 
-4. **Vector Index Creation**
-   ```bash
-   # After activating virtual environment
-   cd src
-   python vector_index.py
-   ```
+**Step 1: Install readpst (if not already installed)**
+```bash
+# On Ubuntu/Debian:
+sudo apt-get install readpst
 
-5. **Data Analysis** (optional)
-   ```bash
-   # After activating virtual environment
-   cd scripts
-   python data_analyzer.py
-   ```
+# On macOS:
+brew install readpst
+
+# On Windows:
+# Download from: https://www.five-ten-sg.com/libpst/
+```
+
+**Step 2: Convert PST to MBOX files**
+```bash
+# Convert PST file to MBOX format
+readpst -D -o /path/to/output/directory "/path/to/your/outlook.pst"
+
+# Example:
+readpst -D -o /home/user/Outlook_LLM "/mnt/external/MyOutlookData.pst"
+```
+
+This command will create multiple `.mbox` files in the output directory, each representing a different Outlook folder.
+
+**Step 3: Convert MBOX to JSONL**
+```bash
+# After activating virtual environment
+cd scripts
+python mbox_converter.py
+```
+
+This script converts all `.mbox` files to a single `outlook_2021.jsonl` file containing structured email data.
+
+**Step 4: Data Cleaning**
+```bash
+# After activating virtual environment
+cd scripts
+python data_cleaner.py
+```
+
+This step:
+- Removes HTML tags from email bodies
+- Filters out spam, newsletters, and auto-replies
+- Standardizes date formats
+- Removes empty emails
+- Outputs `outlook_2021_cleaned.jsonl`
+
+**Step 5: Text Chunking**
+```bash
+# After activating virtual environment
+cd scripts
+python text_chunker.py
+```
+
+This step:
+- Splits long email bodies into smaller chunks (max 1000 characters)
+- Adds overlap between chunks (200 characters)
+- Preserves email metadata (subject, sender, date)
+- Outputs `emails_chunked.jsonl`
+
+**Step 6: Vector Index Creation**
+```bash
+# After activating virtual environment
+cd src
+python vector_index.py
+```
+
+This step:
+- Generates embeddings for all text chunks using Sentence Transformers
+- Creates FAISS vector index for fast similarity search
+- Outputs `faiss_index.bin`
+
+**Step 7: Data Analysis (Optional)**
+```bash
+# After activating virtual environment
+cd scripts
+python data_analyzer.py
+```
+
+This provides statistics about your email dataset (length distribution, etc.).
+
+#### Data Flow Summary
+
+```
+PST File → MBOX Files → JSONL → Cleaned JSONL → Chunked JSONL → Vector Index
+    ↓           ↓          ↓           ↓              ↓              ↓
+readpst    mbox_converter  data_cleaner  text_chunker  vector_index
+```
+
+#### File Sizes and Processing Time
+
+- **PST files**: Can be several GB
+- **MBOX files**: Similar size to PST
+- **JSONL files**: Smaller due to text extraction
+- **Vector index**: Depends on number of chunks (typically 200-500MB)
+
+Processing time depends on:
+- Size of PST file
+- Number of emails
+- Hardware specifications (GPU recommended for vector indexing)
 
 ## Key Features
 
@@ -133,7 +206,9 @@ The project includes an evaluation dataset (`evaluation_analysis.md`) with 15 qu
 
 ## Notes
 
-- This project uses pre-processed data
-- To add new email data, you need to re-run the entire pipeline
-- Keep your API keys secure
-- The system is designed for ITER project email data but can be adapted for other email datasets
+- **Data Processing**: This project requires processing your own PST files through the complete pipeline
+- **File Sizes**: Large data files (JSONL, FAISS index) are excluded from the repository due to GitHub's 100MB limit
+- **API Keys**: Keep your OpenAI API keys secure and never commit them to version control
+- **Adaptability**: While designed for ITER project email data, the system can be adapted for any email dataset
+- **Hardware Requirements**: GPU recommended for vector indexing (CPU fallback available)
+- **Processing Time**: Initial data processing may take several hours depending on dataset size
