@@ -45,14 +45,24 @@ def search_faiss(query: str, top_k: int = 5) -> List[str]:
     return results
 
 # ==== STEP 5: Prompt Creation ====
-def build_prompt(context_chunks: List[str], user_question: str) -> str:
+def build_prompt(context_chunks: List[str], user_question: str, chat_history: List[dict] = None) -> str:
     context = "\n---\n".join(context_chunks)
+    
+    # Build conversation history if provided
+    history_text = ""
+    if chat_history:
+        history_text = "\n\nPrevious conversation:\n"
+        for msg in chat_history[-6:]:  # Keep last 6 messages for context
+            role = "User" if msg["role"] == "user" else "Assistant"
+            history_text += f"{role}: {msg['content']}\n"
+    
     return f"""
-You are an assistant helping answer questions from email data.
+You are an assistant helping answer questions from email data. You can reference previous conversation context when relevant.
 
 <context>
 {context}
 </context>
+{history_text}
 
 Question: {user_question}
 Answer:
@@ -74,15 +84,40 @@ def ask_openai(prompt: str, model: str = DEFAULT_MODEL) -> str:
     return response.choices[0].message.content.strip()
 
 # ==== STEP 7: Run RAG ====
-def run_rag(query: str, model: str = DEFAULT_MODEL):
+def run_rag(query: str, model: str = DEFAULT_MODEL, chat_history: List[dict] = None):
     if model not in AVAILABLE_MODELS:
         raise ValueError(f"Model {model} not available. Available models: {AVAILABLE_MODELS}")
     
     top_chunks = search_faiss(query, top_k=5)
-    prompt = build_prompt(top_chunks, query)
+    prompt = build_prompt(top_chunks, query, chat_history)
     
     print(f"\n🤖 [{model}] Answering...\n")
     return ask_openai(prompt, model)
+
+# ==== STEP 8: Chat Session Management ====
+class ChatSession:
+    def __init__(self):
+        self.history = []
+    
+    def add_message(self, role: str, content: str):
+        """Add a message to chat history"""
+        self.history.append({
+            "role": role,
+            "content": content,
+            "timestamp": __import__('datetime').datetime.now().isoformat()
+        })
+    
+    def get_history(self):
+        """Get chat history"""
+        return self.history
+    
+    def clear_history(self):
+        """Clear chat history"""
+        self.history = []
+    
+    def get_recent_history(self, count: int = 10):
+        """Get recent chat history"""
+        return self.history[-count:] if self.history else []
 
 
 
