@@ -28,7 +28,7 @@ Outlook_LLM/
 
 1. **Clone the repository**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/eunjo-jang/Outlook_RAG_v1.git
    cd Outlook_LLM
    ```
 
