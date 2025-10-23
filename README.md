@@ -56,33 +56,17 @@ Outlook_LLM/
    
    You can use the `env.example` file as a template. See the file for detailed instructions on how to obtain an OpenAI API key.
 
-## Usage
+## Data Preparation
 
-### 1. CLI Interface
-```bash
-# After activating virtual environment
-cd src
-python cli.py
-```
+Before using the RAG system, you need to process your Outlook email data. This section describes the complete data processing pipeline from PST files to the final RAG system.
 
-### 2. Web App (Streamlit)
-```bash
-# After activating virtual environment
-cd src
-streamlit run web_app.py
-```
-
-### 3. Complete Data Processing Pipeline
-
-This section describes the complete data processing pipeline from PST files to the final RAG system.
-
-#### Prerequisites
+### Prerequisites
 
 Before starting, you need:
 - **readpst** tool installed (for PST file conversion)
 - **Outlook PST file** containing your email data
 
-#### Step-by-Step Data Processing
+### Step-by-Step Data Processing
 
 **Step 1: Install readpst (if not already installed)**
 ```bash
@@ -164,7 +148,7 @@ python data_analyzer.py
 
 This provides statistics about your email dataset (length distribution, etc.).
 
-#### Data Flow Summary
+### Data Flow Summary
 
 ```
 PST File → MBOX Files → JSONL → Cleaned JSONL → Chunked JSONL → Vector Index
@@ -172,7 +156,7 @@ PST File → MBOX Files → JSONL → Cleaned JSONL → Chunked JSONL → Vector
 readpst    mbox_converter  data_cleaner  text_chunker  vector_index
 ```
 
-#### File Sizes and Processing Time
+### File Sizes and Processing Time
 
 - **PST files**: Can be several GB
 - **MBOX files**: Similar size to PST
@@ -183,6 +167,24 @@ Processing time depends on:
 - Size of PST file
 - Number of emails
 - Hardware specifications (GPU recommended for vector indexing)
+
+## Usage
+
+After completing the data preparation steps above, you can use the RAG system in two ways:
+
+### 1. CLI Interface
+```bash
+# After activating virtual environment
+cd src
+python cli.py
+```
+
+### 2. Web App (Streamlit)
+```bash
+# After activating virtual environment
+cd src
+streamlit run web_app.py
+```
 
 ## Key Features
 
@@ -203,12 +205,3 @@ Processing time depends on:
 ## Evaluation
 
 The project includes an evaluation dataset (`evaluation_analysis.md`) with 15 question-answer pairs to test the RAG system's performance on both conceptual questions and specific information retrieval tasks.
-
-## Notes
-
-- **Data Processing**: This project requires processing your own PST files through the complete pipeline
-- **File Sizes**: Large data files (JSONL, FAISS index) are excluded from the repository due to GitHub's 100MB limit
-- **API Keys**: Keep your OpenAI API keys secure and never commit them to version control
-- **Adaptability**: While designed for ITER project email data, the system can be adapted for any email dataset
-- **Hardware Requirements**: GPU recommended for vector indexing (CPU fallback available)
-- **Processing Time**: Initial data processing may take several hours depending on dataset size
