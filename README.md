@@ -1,27 +1,25 @@
-# Outlook Email RAG System
+# Outlook Email RAG System (v3)
 
-This project is a RAG (Retrieval-Augmented Generation) system based on Outlook email data. It uses FAISS vector indexing and OpenAI API to provide question-answering capabilities for email content.
+This project is a RAG (Retrieval-Augmented Generation) system based on Outlook email data. It uses ChromaDB vector database with LangChain and OpenAI API to provide intelligent question-answering capabilities for email content.
 
 ## Project Structure
 
 ```
-Outlook_LLM/
-├── src/                    # Main source code
-│   ├── email_rag.py       # RAG system core logic
-│   ├── cli.py             # CLI interface
-│   ├── web_app.py         # Streamlit web app
-│   ├── vector_index.py    # FAISS index creation
-│   └── config.py          # Configuration file
-├── scripts/               # Utility scripts
-│   ├── mbox_converter.py  # MBOX → JSONL conversion
-│   ├── text_chunker.py    # Text chunking
-│   ├── data_cleaner.py    # Data cleaning
-│   └── data_analyzer.py   # Data analysis
-├── data/                  # Data files
-│   ├── *.jsonl           # Email data
-│   └── faiss_index.bin   # Vector index
-├── requirements.txt       # Dependencies
-└── README.md             # Project documentation
+Outlook_LLM_v3/
+├── src/                          # Main source code
+│   ├── rag_streamlit_chatbot.py # Streamlit web app with RAG
+│   ├── rag_chat.py              # RAG chat logic
+│   └── build_chromaDB.py        # ChromaDB vector store creation
+├── scripts/                      # Utility scripts
+│   ├── mbox_converter.py        # MBOX → JSONL conversion
+│   ├── data_cleaner.py          # Data cleaning
+│   └── chunk_emailwise.py       # Email-wise text chunking
+├── data/                         # Data files (not in git)
+│   ├── *.jsonl                  # Email data
+│   └── vectorstore/             # ChromaDB vector store
+├── run_chatbot.sh               # Quick start script
+├── requirements.txt             # Dependencies
+└── README.md                    # Project documentation
 ```
 
 ## Installation and Setup
@@ -51,10 +49,9 @@ Outlook_LLM/
    Create a `.env` file in the root directory and add the following:
    ```
    OPENAI_API_KEY=your_openai_api_key
-   OPENAI_MODEL=gpt-4o
    ```
    
-   You can use the `env.example` file as a template. See the file for detailed instructions on how to obtain an OpenAI API key.
+   Get your OpenAI API key from: https://platform.openai.com/api-keys
 
 ## Data Preparation
 
@@ -114,46 +111,36 @@ This step:
 - Removes empty emails
 - Outputs `outlook_2021_cleaned.jsonl`
 
-**Step 5: Text Chunking**
+**Step 5: Email-wise Text Chunking**
 ```bash
 # After activating virtual environment
 cd scripts
-python text_chunker.py
+python chunk_emailwise.py
 ```
 
 This step:
-- Splits long email bodies into smaller chunks (max 1000 characters)
-- Adds overlap between chunks (200 characters)
+- Splits each email into manageable chunks
 - Preserves email metadata (subject, sender, date)
-- Outputs `emails_chunked.jsonl`
+- Outputs `outlook_chunk_emailwise.jsonl`
 
-**Step 6: Vector Index Creation**
+**Step 6: Vector Database Creation**
 ```bash
 # After activating virtual environment
 cd src
-python vector_index.py
+python build_chromaDB.py
 ```
 
 This step:
-- Generates embeddings for all text chunks using Sentence Transformers
-- Creates FAISS vector index for fast similarity search
-- Outputs `faiss_index.bin`
-
-**Step 7: Data Analysis (Optional)**
-```bash
-# After activating virtual environment
-cd scripts
-python data_analyzer.py
-```
-
-This provides statistics about your email dataset (length distribution, etc.).
+- Generates embeddings using HuggingFace Sentence Transformers
+- Creates ChromaDB vector store for fast similarity search
+- Outputs vector database in `data/vectorstore/chroma_outlook/`
 
 ### Data Flow Summary
 
 ```
-PST File → MBOX Files → JSONL → Cleaned JSONL → Chunked JSONL → Vector Index
+PST File → MBOX Files → JSONL → Cleaned JSONL → Chunked JSONL → ChromaDB
     ↓           ↓          ↓           ↓              ↓              ↓
-readpst    mbox_converter  data_cleaner  text_chunker  vector_index
+readpst    mbox_converter  data_cleaner  chunk_emailwise  build_chromaDB
 ```
 
 ### File Sizes and Processing Time
@@ -161,47 +148,57 @@ readpst    mbox_converter  data_cleaner  text_chunker  vector_index
 - **PST files**: Can be several GB
 - **MBOX files**: Similar size to PST
 - **JSONL files**: Smaller due to text extraction
-- **Vector index**: Depends on number of chunks (typically 200-500MB)
+- **ChromaDB**: Depends on number of chunks (typically 200-500MB)
 
 Processing time depends on:
 - Size of PST file
 - Number of emails
-- Hardware specifications (GPU recommended for vector indexing)
+- Hardware specifications
 
 ## Usage
 
-After completing the data preparation steps above, you can use the RAG system in two ways:
+After completing the data preparation steps above, you can use the RAG chatbot:
 
-### 1. CLI Interface
+### Quick Start (Recommended)
 ```bash
-# After activating virtual environment
-cd src
-python cli.py
+# Run the startup script
+./run_chatbot.sh
 ```
 
-### 2. Web App (Streamlit)
+This script will:
+- Activate the virtual environment
+- Launch the Streamlit web interface
+- Open the chatbot in your browser automatically
+
+### Manual Start
 ```bash
 # After activating virtual environment
+source venv/bin/activate
 cd src
-streamlit run web_app.py
+streamlit run rag_streamlit_chatbot.py
 ```
+
+The chatbot will be available at `http://localhost:8501`
 
 ## Key Features
 
-- **Email Search**: Find relevant emails using FAISS vector search
-- **Question-Answering**: Generate answers using OpenAI GPT models
-- **Model Selection**: Choose from various OpenAI models (GPT-4o, GPT-4o-mini, GPT-4-turbo, GPT-3.5-turbo)
-- **Web Interface**: User-friendly UI with Streamlit
-- **CLI Interface**: Quick question-answering via command line
+- **Intelligent Email Search**: Find relevant emails using ChromaDB vector similarity search
+- **Contextual Q&A**: Generate accurate answers using RAG with OpenAI GPT-4o
+- **Few-Shot Learning**: Improved responses with semantic example selection
+- **Chat History**: Maintains conversation context across multiple queries
+- **Source Display**: Shows relevant email excerpts used to generate answers
+- **Modern UI**: Beautiful, responsive Streamlit interface
+- **Email-wise Chunking**: Better context preservation with email-centric chunking
 
 ## Technology Stack
 
-- **Vector Search**: FAISS
-- **Embeddings**: Sentence Transformers
-- **LLM**: OpenAI GPT models
+- **RAG Framework**: LangChain
+- **Vector Database**: ChromaDB
+- **Embeddings**: HuggingFace Sentence Transformers (all-MiniLM-L6-v2)
+- **LLM**: OpenAI GPT-4o
 - **Web Framework**: Streamlit
 - **Data Processing**: NLTK, BeautifulSoup, python-dateutil
 
-## Evaluation
+## Project Background
 
-The project includes an evaluation dataset (`evaluation_analysis.md`) with 15 question-answer pairs to test the RAG system's performance on both conceptual questions and specific information retrieval tasks.
+This RAG system is designed for the ITER Vacuum Vessel project, enabling efficient search and analysis of project-related email communications. The v3 version represents a major refactor with improved chunking strategy, ChromaDB integration, and enhanced UI/UX.
