@@ -60,6 +60,9 @@ data/
 *.jsonl
 *.bin
 
+# Vector store (large database files)
+vectorstore/
+
 # Logs
 *.log
 
