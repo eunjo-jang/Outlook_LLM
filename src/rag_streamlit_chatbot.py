@@ -40,7 +40,7 @@ COLLECTION_NAME = "email_rag_collection"
 
 embedding_model = HuggingFaceEmbeddings(
     model_name="BAAI/bge-m3",
-    model_kwargs={"device": "cpu"}  # CPU 사용 (안정성)
+    model_kwargs={"device": "cuda"}  # GPU 사용 (RTX 6000 Ada)
 )
 
 vectorstore = Chroma(

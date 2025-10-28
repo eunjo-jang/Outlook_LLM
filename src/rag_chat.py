@@ -18,7 +18,7 @@ os.environ["OPENAI_API_KEY"] = api_key
 # ===== 2️⃣ 임베딩 모델 및 DB 로딩 =====
 embedding_model = HuggingFaceEmbeddings(
     model_name="BAAI/bge-m3",
-    model_kwargs={"device": "cpu"}
+    model_kwargs={"device": "cuda"}  # GPU 사용
 )
 
 vectorstore = Chroma(

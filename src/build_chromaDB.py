@@ -9,9 +9,10 @@ CHROMA_DB_PATH = "/home/eunjo/Desktop/Outlook_LLM_v3/data/vectorstore/chroma_out
 COLLECTION_NAME = "email_rag_collection"
 BATCH_SIZE = 500  # 일괄 삽입 단위
 
-# 임베딩 모델 설정 (BGE-M3: 고성능 다국어 임베딩)
+# 임베딩 모델 설정 (BGE-M3: 고성능 다국어 임베딩, GPU 가속)
 embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
-    model_name="BAAI/bge-m3"
+    model_name="BAAI/bge-m3",
+    device="cuda"  # GPU 사용
 )
 
 
