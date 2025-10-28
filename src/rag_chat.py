@@ -16,13 +16,16 @@ if not api_key:
 os.environ["OPENAI_API_KEY"] = api_key
 
 # ===== 2️⃣ 임베딩 모델 및 DB 로딩 =====
-embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/paraphrase-MiniLM-L6-v2")
+embedding_model = HuggingFaceEmbeddings(
+    model_name="BAAI/bge-m3",
+    model_kwargs={"device": "cpu"}
+)
 
 vectorstore = Chroma(
     persist_directory="../vectorstore/chroma_outlook",  # 벡터 DB 경로
     embedding_function=embedding_model
 )
-retriever = vectorstore.as_retriever(search_kwargs={"k": 5})
+retriever = vectorstore.as_retriever(search_kwargs={"k": 10})
 
 # ===== 3️⃣ 프롬프트 정의 =====
 prompt_template = """

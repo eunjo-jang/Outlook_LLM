@@ -39,7 +39,7 @@ CHROMA_PATH = "../data/vectorstore/chroma_outlook"
 COLLECTION_NAME = "email_rag_collection"
 
 embedding_model = HuggingFaceEmbeddings(
-    model_name="sentence-transformers/all-MiniLM-L6-v2",
+    model_name="BAAI/bge-m3",
     model_kwargs={"device": "cpu"}  # CPU 사용 (안정성)
 )
 
@@ -49,7 +49,7 @@ vectorstore = Chroma(
     embedding_function=embedding_model
 )
 
-retriever = vectorstore.as_retriever(search_kwargs={"k": 20})  # 더 많은 후보 검색으로 정확도 향상
+retriever = vectorstore.as_retriever(search_kwargs={"k": 10})  # Top 10 유사 문서 검색
 
 # =====================
 # 3. Query Analysis & Filtering
@@ -172,23 +172,47 @@ prompt = ChatPromptTemplate.from_messages([
 # 5. Smart Retrieval Function
 # =====================
 def smart_retrieve(query: str):
-    """쿼리 분석 + 메타데이터 필터링 + 의미 검색을 결합한 스마트 검색"""
+    """쿼리 분석 + 메타데이터 필터링(선행) + 의미 검색을 결합한 스마트 검색"""
     # 1단계: LLM으로 쿼리 분석
     filters = extract_query_filters(query, llm)
     
-    # 2단계: 많은 후보 가져오기 (k=50)
-    large_retriever = vectorstore.as_retriever(search_kwargs={"k": 50})
-    candidates = large_retriever.invoke(query)
-    
-    # 3단계: 메타데이터 필터링 적용
+    # 2단계: ChromaDB where 절 구성 (메타데이터 필터링 선행)
+    where_filter = None
     if filters and any(filters.values()):
-        filtered = filter_docs_by_metadata(candidates, filters)
-        # 필터링 결과가 너무 적으면 원본 사용
-        if len(filtered) >= 3:
-            candidates = filtered
+        where_conditions = []
+        
+        # 날짜 필터링
+        if filters.get("date_exact"):
+            where_conditions.append({"date": {"$contains": filters["date_exact"]}})
+        elif filters.get("date_month"):
+            where_conditions.append({"date": {"$contains": filters["date_month"]}})
+        elif filters.get("date_year"):
+            where_conditions.append({"date": {"$contains": filters["date_year"]}})
+        
+        # 발신자 필터링
+        if filters.get("sender_name"):
+            where_conditions.append({"sender": {"$contains": filters["sender_name"]}})
+        
+        # 여러 조건이 있으면 AND 연산
+        if len(where_conditions) > 1:
+            where_filter = {"$and": where_conditions}
+        elif len(where_conditions) == 1:
+            where_filter = where_conditions[0]
     
-    # 4단계: 상위 20개만 반환
-    return candidates[:20]
+    # 3단계: 메타데이터 필터링 후 유사도 검색 (k=10)
+    try:
+        if where_filter:
+            # 메타데이터 필터링을 먼저 적용한 검색
+            candidates = vectorstore.similarity_search(query, k=10, filter=where_filter)
+        else:
+            # 필터 없으면 일반 유사도 검색
+            candidates = vectorstore.similarity_search(query, k=10)
+    except Exception as e:
+        # 필터링 실패시 폴백
+        print(f"Filtered search failed: {e}, falling back to normal search")
+        candidates = vectorstore.similarity_search(query, k=10)
+    
+    return candidates
 
 # =====================
 # 6. LLM and Chain
